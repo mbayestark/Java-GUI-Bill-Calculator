@@ -1,22 +1,48 @@
 package db;
+
+import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.util.Properties;
 
 public class DBConnection {
-    private static final String URL = "jdbc:postgresql//localhost:5432/electrcity_db";
-    private static final String USER="mbaye";
-    private static final String PASSWORD="";
 
-    public void connect(){
-        try(Connection conn= DriverManager.getConnection(URL,USER,PASSWORD)){
-            if (conn!=null){
-                System.out.println("Connected to DB");
+    private static DBConnection instance;
+    private Connection connection;
+
+    private DBConnection() {
+        try {
+            Properties props = new Properties();
+            InputStream input = getClass()
+                    .getClassLoader()
+                    .getResourceAsStream("db.properties");
+            if (input == null) {
+                throw new RuntimeException("db.properties not found in classpath");
             }
-        } catch (SQLException e){
-            System.out.println(e.getMessage());
+            props.load(input);
+
+            String url = "jdbc:postgresql://"
+                    + props.getProperty("db.host") + ":"
+                    + props.getProperty("db.port") + "/"
+                    + props.getProperty("db.name");
+
+            connection = DriverManager.getConnection(
+                    url,
+                    props.getProperty("db.user"),
+                    props.getProperty("db.password")
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
+    public static DBConnection getInstance() {
+        if (instance == null) instance = new DBConnection();
+        return instance;
+    }
+
+    public Connection getConnection() {
+        return connection;
+    }
 }
