@@ -15,7 +15,7 @@ public class AppData {
     private AppData() {
         appliances = new ArrayList<>();
         tariffs = new ArrayList<>();
-        currency = "USD";
+        currency = "CFA";
         flatRate = 0.0;
         useTieredPricing = false;
     }
