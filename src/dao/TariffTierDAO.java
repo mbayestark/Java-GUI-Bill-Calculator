@@ -39,6 +39,18 @@ public class TariffTierDAO implements DAO<TariffTier> {
         return tiers;
     }
 
+    public List<TariffTier> getByPlanId(int planId) throws SQLException {
+        String sql = "SELECT * FROM tariff_tiers WHERE tariff_plan_id = ? ORDER BY up_to_kwh";
+        PreparedStatement stmt = connection.prepareStatement(sql);
+        stmt.setInt(1, planId);
+        ResultSet rs = stmt.executeQuery();
+        List<TariffTier> tiers = new ArrayList<>();
+        while (rs.next()) {
+            tiers.add(mapRow(rs));
+        }
+        return tiers;
+    }
+
     @Override
     public int save(TariffTier tier) throws SQLException {
         if (tier.getId() > 0) {
@@ -49,10 +61,13 @@ public class TariffTierDAO implements DAO<TariffTier> {
 
     @Override
     public int insert(TariffTier tier) throws SQLException {
-        String sql = "INSERT INTO tariff_tiers (up_to_kwh, rate_per_kwh) VALUES (?, ?)";
-        PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-        stmt.setDouble(1, tier.getUpToKwh());
-        stmt.setDouble(2, tier.getRatePerKwh());
+        String sql = "INSERT INTO tariff_tiers (tariff_plan_id, up_to_kwh, rate_per_kwh) "
+                + "VALUES (?, ?, ?)";
+        PreparedStatement stmt = connection.prepareStatement(sql,
+                Statement.RETURN_GENERATED_KEYS);
+        stmt.setInt(1, tier.getTariffPlanId());
+        stmt.setDouble(2, tier.getUpToKwh());
+        stmt.setDouble(3, tier.getRatePerKwh());
         int rows = stmt.executeUpdate();
         ResultSet keys = stmt.getGeneratedKeys();
         if (keys.next()) {
@@ -63,11 +78,13 @@ public class TariffTierDAO implements DAO<TariffTier> {
 
     @Override
     public int update(TariffTier tier) throws SQLException {
-        String sql = "UPDATE tariff_tiers SET up_to_kwh = ?, rate_per_kwh = ? WHERE id = ?";
+        String sql = "UPDATE tariff_tiers SET tariff_plan_id = ?, up_to_kwh = ?, "
+                + "rate_per_kwh = ? WHERE id = ?";
         PreparedStatement stmt = connection.prepareStatement(sql);
-        stmt.setDouble(1, tier.getUpToKwh());
-        stmt.setDouble(2, tier.getRatePerKwh());
-        stmt.setInt(3, tier.getId());
+        stmt.setInt(1, tier.getTariffPlanId());
+        stmt.setDouble(2, tier.getUpToKwh());
+        stmt.setDouble(3, tier.getRatePerKwh());
+        stmt.setInt(4, tier.getId());
         return stmt.executeUpdate();
     }
 
@@ -82,6 +99,7 @@ public class TariffTierDAO implements DAO<TariffTier> {
     private TariffTier mapRow(ResultSet rs) throws SQLException {
         return new TariffTier(
                 rs.getInt("id"),
+                rs.getInt("tariff_plan_id"),
                 rs.getDouble("up_to_kwh"),
                 rs.getDouble("rate_per_kwh")
         );

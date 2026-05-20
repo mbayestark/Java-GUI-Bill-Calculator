@@ -39,6 +39,18 @@ public class ApplianceDAO implements DAO<Appliance> {
         return appliances;
     }
 
+    public List<Appliance> getByUserId(int userId) throws SQLException {
+        String sql = "SELECT * FROM appliances WHERE user_id = ?";
+        PreparedStatement stmt = connection.prepareStatement(sql);
+        stmt.setInt(1, userId);
+        ResultSet rs = stmt.executeQuery();
+        List<Appliance> appliances = new ArrayList<>();
+        while (rs.next()) {
+            appliances.add(mapRow(rs));
+        }
+        return appliances;
+    }
+
     @Override
     public int save(Appliance appliance) throws SQLException {
         if (appliance.getId() > 0) {
@@ -49,14 +61,19 @@ public class ApplianceDAO implements DAO<Appliance> {
 
     @Override
     public int insert(Appliance appliance) throws SQLException {
-        String sql = "INSERT INTO appliances (name, category, watts, hours_per_day, days_per_month, quantity) VALUES (?, ?, ?, ?, ?, ?)";
-        PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-        stmt.setString(1, appliance.getName());
-        stmt.setString(2, appliance.getCategory());
-        stmt.setDouble(3, appliance.getWatts());
-        stmt.setDouble(4, appliance.getHoursPerDay());
-        stmt.setDouble(5, appliance.getDaysPerMonth());
-        stmt.setInt(6, appliance.getQuantity());
+        String sql = "INSERT INTO appliances (user_id, name, category, watts, "
+                + "hours_per_day, days_per_month, quantity, peak_hours_per_day) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement stmt = connection.prepareStatement(sql,
+                Statement.RETURN_GENERATED_KEYS);
+        stmt.setInt(1, appliance.getUserId());
+        stmt.setString(2, appliance.getName());
+        stmt.setString(3, appliance.getCategory());
+        stmt.setDouble(4, appliance.getWatts());
+        stmt.setDouble(5, appliance.getHoursPerDay());
+        stmt.setDouble(6, appliance.getDaysPerMonth());
+        stmt.setInt(7, appliance.getQuantity());
+        stmt.setDouble(8, appliance.getPeakHoursPerDay());
         int rows = stmt.executeUpdate();
         ResultSet keys = stmt.getGeneratedKeys();
         if (keys.next()) {
@@ -67,7 +84,9 @@ public class ApplianceDAO implements DAO<Appliance> {
 
     @Override
     public int update(Appliance appliance) throws SQLException {
-        String sql = "UPDATE appliances SET name = ?, category = ?, watts = ?, hours_per_day = ?, days_per_month = ?, quantity = ? WHERE id = ?";
+        String sql = "UPDATE appliances SET name = ?, category = ?, watts = ?, "
+                + "hours_per_day = ?, days_per_month = ?, quantity = ?, "
+                + "peak_hours_per_day = ? WHERE id = ?";
         PreparedStatement stmt = connection.prepareStatement(sql);
         stmt.setString(1, appliance.getName());
         stmt.setString(2, appliance.getCategory());
@@ -75,7 +94,8 @@ public class ApplianceDAO implements DAO<Appliance> {
         stmt.setDouble(4, appliance.getHoursPerDay());
         stmt.setDouble(5, appliance.getDaysPerMonth());
         stmt.setInt(6, appliance.getQuantity());
-        stmt.setInt(7, appliance.getId());
+        stmt.setDouble(7, appliance.getPeakHoursPerDay());
+        stmt.setInt(8, appliance.getId());
         return stmt.executeUpdate();
     }
 
@@ -90,12 +110,14 @@ public class ApplianceDAO implements DAO<Appliance> {
     private Appliance mapRow(ResultSet rs) throws SQLException {
         return new Appliance(
                 rs.getInt("id"),
+                rs.getInt("user_id"),
                 rs.getString("name"),
                 rs.getString("category"),
                 rs.getDouble("watts"),
                 rs.getDouble("hours_per_day"),
                 rs.getDouble("days_per_month"),
-                rs.getInt("quantity")
+                rs.getInt("quantity"),
+                rs.getDouble("peak_hours_per_day")
         );
     }
 }

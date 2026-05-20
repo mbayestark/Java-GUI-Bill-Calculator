@@ -1,23 +1,23 @@
 package model;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 public class AppData {
     private static AppData instance;
 
     private List<Appliance> appliances;
-    private List<TariffTier> tariffs;
-    private double flatRate;
+    private TariffPlan tariffPlan;
     private String currency;
-    private boolean useTieredPricing;
+    private double monthlyBudget;
+    private String clientType;
 
     private AppData() {
-        appliances = new ArrayList<>();
-        tariffs = new ArrayList<>();
-        currency = "CFA";
-        flatRate = 0.0;
-        useTieredPricing = false;
+        this.appliances = new ArrayList<>();
+        this.tariffPlan = null;
+        this.currency = "CFA";
+        this.monthlyBudget = 0;
+        this.clientType = null;
     }
 
     public static AppData getInstance() {
@@ -27,47 +27,87 @@ public class AppData {
         return instance;
     }
 
+    public void clear() {
+        appliances.clear();
+        tariffPlan = null;
+        monthlyBudget = 0;
+        clientType = null;
+    }
+
     public void addAppliance(Appliance appliance) {
         appliances.add(appliance);
     }
 
-    public void addTariffTier(TariffTier tier) {
-        tariffs.add(tier);
+    public double getTotalKwh() {
+        double total = 0;
+        for (int i = 0; i < appliances.size(); i++) {
+            total = total + appliances.get(i).getMonthlyKwh();
+        }
+        return total;
     }
 
-    public double getTotalKwh() {
-        double totalKwh = 0;
-        for (Appliance appliance : appliances) {
-            totalKwh += appliance.getMonthlyKwh();
+    public double getTotalPeakKwh() {
+        double total = 0;
+        for (int i = 0; i < appliances.size(); i++) {
+            total = total + appliances.get(i).getPeakKwh();
         }
-        return totalKwh;
+        return total;
+    }
+
+    public double getPeakSurcharge() {
+        if (tariffPlan == null) {
+            return 0;
+        }
+        double peakKwh = getTotalPeakKwh();
+        double multiplier = tariffPlan.getPeakMultiplier();
+        return peakKwh * tariffPlan.getFlatRate() * (multiplier - 1.0);
+    }
+
+    public double getRawCost() {
+        if (tariffPlan == null) {
+            return 0;
+        }
+        double baseCost = tariffPlan.calculateCost(getTotalKwh());
+        double peakSurcharge = getPeakSurcharge();
+        return baseCost + peakSurcharge;
+    }
+
+    public double getDiscount() {
+        return getRawCost() * ClientTypePolicy.getDiscountRate(clientType);
     }
 
     public double getTotalCost() {
-        double totalKwh = getTotalKwh();
-        if (!useTieredPricing) {
-            return totalKwh * flatRate;
+        return ClientTypePolicy.applyDiscount(getRawCost(), clientType);
+    }
+
+    public boolean isOverBudget() {
+        if (monthlyBudget <= 0) {
+            return false;
         }
-        double remaining = totalKwh;
-        double cost = 0;
-        double previousLimit = 0;
-        for (TariffTier tier : tariffs) {
-            double tierRange = tier.getUpToKwh() - previousLimit;
-            if (remaining <= 0) break;
-            double kwhInTier = Math.min(remaining, tierRange);
-            cost += kwhInTier * tier.getRatePerKwh();
-            remaining -= kwhInTier;
-            previousLimit = tier.getUpToKwh();
-        }
-        return cost;
+        return getTotalCost() > monthlyBudget;
+    }
+
+    public List<CategorySummary> getCategorySummaries() {
+        return CategorySummary.buildSummaries(appliances, getTotalCost());
     }
 
     public List<Appliance> getAppliances() { return appliances; }
-    public List<TariffTier> getTariffs() { return tariffs; }
-    public double getFlatRate() { return flatRate; }
-    public void setFlatRate(double flatRate) { this.flatRate = flatRate; }
+
+    public TariffPlan getTariffPlan() { return tariffPlan; }
+    public void setTariffPlan(TariffPlan tariffPlan) {
+        this.tariffPlan = tariffPlan;
+    }
+
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }
-    public boolean isUseTieredPricing() { return useTieredPricing; }
-    public void setUseTieredPricing(boolean useTieredPricing) { this.useTieredPricing = useTieredPricing; }
+
+    public double getMonthlyBudget() { return monthlyBudget; }
+    public void setMonthlyBudget(double monthlyBudget) {
+        this.monthlyBudget = monthlyBudget;
+    }
+
+    public String getClientType() { return clientType; }
+    public void setClientType(String clientType) {
+        this.clientType = clientType;
+    }
 }
